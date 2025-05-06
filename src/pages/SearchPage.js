@@ -6,12 +6,6 @@ import {
   TextField,
   Typography,
   Pagination,
-  Grid,
-  Card,
-  CardActionArea,
-  CardContent,
-  CardMedia,
-  Skeleton,
 } from "@mui/material";
 import FilterBar from "../components/FilterBar";
 import BannerCarousel from "../components/Banner";
