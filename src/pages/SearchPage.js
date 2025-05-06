@@ -131,14 +131,15 @@ export default function SearchPage() {
           <FilterBar filters={filters} onChange={setFilters} />
 
           {/* Search */}
-          <Box sx={{ flexBasis: { xs: "100%", sm: "auto" }, minWidth: 250 }}>
+          <Box sx={{ minWidth: 200 }}>
             <TextField
               label="Search Anime"
               variant="outlined"
+              size="small"
               fullWidth
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              sx={{ bgcolor: "black" }}
+              sx={{ bgcolor: "transparent" }}
             />
           </Box>
         </Box>
