@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash.debounce";
-import {
-  Box,
-  TextField,
-  Typography,
-  Pagination,
-} from "@mui/material";
+import { Box, TextField, Typography, Pagination } from "@mui/material";
 import FilterBar from "../components/FilterBar";
 import BannerCarousel from "../components/Banner";
 import AnimeGrid from "../components/AnimeGrid";
@@ -29,7 +24,7 @@ export default function SearchPage() {
   const navigate = useNavigate();
   const bannerInterval = useRef(null);
 
-  // core fetch with 429-guard 
+  // core fetch with 429-guard
   const fetchAnime = (q, p, f) => {
     setLoading(true);
     const basePath = q ? "/anime" : "/top/anime";
@@ -158,6 +153,13 @@ export default function SearchPage() {
         )}
 
         {/* Anime Grid */}
+        <Typography
+          variant="h6"
+          sx={{ fontWeight: "bold", mt: 4, mb: 2, color: "white" }}
+        >
+          Top Anime
+        </Typography>
+
         <AnimeGrid
           results={results}
           loading={loading}
