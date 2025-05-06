@@ -17,6 +17,7 @@ import {
 export default function SearchPage() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
+  const [recommended, setRecommended] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
@@ -56,9 +57,23 @@ export default function SearchPage() {
       return () => clearInterval(bannerInterval.current);
     }
   }, [results]);
+  useEffect(() => {
+    fetch("https://api.jikan.moe/v4/recommendations/anime")
+      .then((res) => res.json())
+      .then((data) => {
+        const unique = data.data
+          .filter(
+            (item, index, self) =>
+              index ===
+              self.findIndex((t) => t.entry[0].mal_id === item.entry[0].mal_id)
+          )
+          .slice(0, 10); // get top 10 recommended blocks
+        setRecommended(unique);
+      });
+  }, []);
 
   const handleCardClick = (id) => navigate(`/anime/${id}`);
-  const topBanners = results.slice(0, 10);
+  const topBanners = recommended;
 
   return (
     <Box
@@ -98,55 +113,56 @@ export default function SearchPage() {
                 width: `${topBanners.length * 10}%`,
               }}
             >
-              {topBanners.map((anime) => (
-                <Box
-                  key={anime.mal_id}
-                  sx={{
-                    flex: "0 0 100%",
-                    height: 250,
-                    display: "flex",
-                    bgcolor: "#000000",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    px: 4,
-                    cursor: "pointer",
-                  }}
-                  onClick={() => handleCardClick(anime.mal_id)}
-                >
-                  {/* Left content */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
-                      {anime.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: "white" }}>
-                      {anime.synopsis?.length > 100
-                        ? anime.synopsis.slice(0, 100) + "..."
-                        : anime.synopsis || "No description available."}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Genres:{" "}
-                      {(anime.genres || []).map((g) => g.name).join(", ") ||
-                        "N/A"}
-                    </Typography>
-                  </Box>
-
-                  {/* Right image */}
+              {topBanners.map((rec, index) => {
+                const anime = rec.entry[0]; // Get the first recommended anime
+                return (
                   <Box
-                    component="img"
-                    src={anime.images.jpg.large_image_url}
-                    alt={anime.title}
+                    key={anime.mal_id}
                     sx={{
-                      width: 120,
-                      height: 180,
-                      objectFit: "cover",
-                      border: "1px solid #333",
-                      borderRadius: 1,
-                      ml: 3,
-                      flexShrink: 0,
+                      flex: "0 0 100%",
+                      height: 250,
+                      display: "flex",
+                      bgcolor: "#000000",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      px: 4,
+                      cursor: "pointer",
                     }}
-                  />
-                </Box>
-              ))}
+                    onClick={() => handleCardClick(anime.mal_id)}
+                  >
+                    {/* Left content */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: "bold", mb: 1 }}
+                      >
+                        {anime.title}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "white" }}>
+                        {rec.content?.length > 100
+                          ? rec.content.slice(0, 100) + "..."
+                          : rec.content || "No description available."}
+                      </Typography>
+                    </Box>
+
+                    {/* Right image */}
+                    <Box
+                      component="img"
+                      src={anime.images.jpg.large_image_url}
+                      alt={anime.title}
+                      sx={{
+                        width: 120,
+                        height: 180,
+                        objectFit: "cover",
+                        border: "1px solid #333",
+                        borderRadius: 1,
+                        ml: 3,
+                        flexShrink: 0,
+                      }}
+                    />
+                  </Box>
+                );
+              })}
             </Box>
           </Box>
         )}
