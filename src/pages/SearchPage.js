@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash.debounce";
 import {
@@ -12,7 +12,13 @@ import {
   CardContent,
   CardMedia,
   Skeleton,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  InputAdornment,
+  IconButton,
 } from "@mui/material";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export default function SearchPage() {
   const [search, setSearch] = useState("");
@@ -22,89 +28,223 @@ export default function SearchPage() {
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(1);
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [filters, setFilters] = useState({
+    type: "",
+    filter: "",
+    rating: "",
+    sfw: false,
+  });
+
   const navigate = useNavigate();
   const bannerInterval = useRef(null);
 
-  const fetchAnime = (query, pageNum) => {
+  // --- core fetch with 429-guard ---
+  const fetchAnime = (q, p, f) => {
     setLoading(true);
-    const url = query
-      ? `https://api.jikan.moe/v4/anime?q=${query}&page=${pageNum}`
-      : `https://api.jikan.moe/v4/top/anime?page=${pageNum}`;
+    const basePath = q ? "/anime" : "/top/anime";
+    const params = new URLSearchParams({ page: p });
+    if (q) {
+      params.set("q", q);
+    } else {
+      if (f.filter) params.set("filter", f.filter);
+      if (f.type) params.set("type", f.type);
+      if (f.rating) params.set("rating", f.rating);
+      if (f.sfw) params.set("sfw", "true");
+    }
 
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setResults(data.data.slice(0, 21));
-        setPageCount(data.pagination.last_visible_page);
-        setLoading(false);
+    fetch(`https://api.jikan.moe/v4${basePath}?${params.toString()}`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`API returned ${res.status}`);
+        }
+        return res.json();
       })
-      .catch(() => setLoading(false));
+      .then(data => {
+        const list = Array.isArray(data.data) ? data.data : [];
+        setResults(list.slice(0, 21));
+        setPageCount(data.pagination?.last_visible_page || 1);
+      })
+      .catch(err => {
+        console.error(err);
+        if (err.message.includes("429")) {
+          console.warn("Rate limit hit — slow down your requests.");
+        }
+        setResults([]);
+        setPageCount(1);
+      })
+      .finally(() => setLoading(false));
   };
 
-  const debouncedSearch = debounce((value, pageNum) => {
-    fetchAnime(value, pageNum);
-  }, 250);
+  // --- debounce all inputs together ---
+  const debouncedFetch = useRef(
+    debounce((q, p, f) => {
+      fetchAnime(q, p, f);
+    }, 500)
+  ).current;
 
+  // cancel debounce on unmount
+  useEffect(() => () => debouncedFetch.cancel(), [debouncedFetch]);
+
+  // whenever search, page, or filters change, wait 500ms then fetch
   useEffect(() => {
-    debouncedSearch(search, page);
-  }, [search, page]);
+    debouncedFetch(search, page, filters);
+  }, [search, page, filters, debouncedFetch]);
 
+  // --- banner carousel ---
   useEffect(() => {
     if (results.length > 0) {
       bannerInterval.current = setInterval(() => {
-        setCurrentBanner((prev) => (prev + 1) % Math.min(results.length, 5));
+        setCurrentBanner(prev => (prev + 1) % Math.min(results.length, 5));
       }, 4000);
       return () => clearInterval(bannerInterval.current);
     }
   }, [results]);
+
+  // --- recommendations (once) ---
   useEffect(() => {
     fetch("https://api.jikan.moe/v4/recommendations/anime")
-      .then((res) => res.json())
-      .then((data) => {
+      .then(res => res.json())
+      .then(data => {
         const unique = data.data
           .filter(
-            (item, index, self) =>
-              index ===
-              self.findIndex((t) => t.entry[0].mal_id === item.entry[0].mal_id)
+            (item, i, self) =>
+              i === self.findIndex(t => t.entry[0].mal_id === item.entry[0].mal_id)
           )
-          .slice(0, 10); // get top 10 recommended blocks
+          .slice(0, 10);
         setRecommended(unique);
-      });
+      })
+      .catch(console.error);
   }, []);
 
-  const handleCardClick = (id) => navigate(`/anime/${id}`);
+  const handleCardClick = id => navigate(`/anime/${id}`);
   const topBanners = recommended;
 
   return (
-    <Box
-      sx={{
-        width: "100vw",
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        color: "text.primary",
-        p: 4,
-      }}
-    >
-      <Box sx={{ maxWidth: "1200px", mx: "auto" }}>
-        <TextField
-          label="Search Anime"
-          variant="outlined"
-          fullWidth
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ mb: 4 }}
-        />
+    <Box sx={{ width: "100%", minHeight: "100vh", bgcolor: "background.default", color: "text.primary", p: 4 }}>
+      <Box sx={{ maxWidth: 1200, mx: "auto" }}>
+        {/* Navigation Bar */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 4, flexWrap: "wrap", gap: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: "bold", color: "white" }}>
+            Myanime
+          </Typography>
+
+          {/* Filters */}
+          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+            {/* Type */}
+            <TextField
+              select
+              label="Type"
+              size="small"
+              value={filters.type}
+              onChange={e => setFilters(f => ({ ...f, type: e.target.value }))}
+              sx={{ minWidth: 200 }}
+              SelectProps={{
+                displayEmpty: true,
+                renderValue: sel => (sel ? sel.toUpperCase() : ""),
+              }}
+              InputProps={{
+                endAdornment: filters.type && (
+                  <InputAdornment position="start">
+                    <IconButton size="small" onClick={() => setFilters(f => ({ ...f, type: "" }))}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            >
+              {["tv", "movie", "ova", "special", "ona", "music", "cm", "pv", "tv special"].map(t => (
+                <MenuItem key={t} value={t}>
+                  {t.toUpperCase()}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {/* Top Filter */}
+            <TextField
+              select
+              label="Top Filter"
+              size="small"
+              value={filters.filter}
+              onChange={e => setFilters(f => ({ ...f, filter: e.target.value }))}
+              sx={{ minWidth: 200 }}
+              SelectProps={{
+                displayEmpty: true,
+                renderValue: sel => sel || "",
+              }}
+              InputProps={{
+                endAdornment: filters.filter && (
+                  <InputAdornment position="start">
+                    <IconButton size="small" onClick={() => setFilters(f => ({ ...f, filter: "" }))}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            >
+              {["Airing", "Upcoming", "By Popularity", "Favorite"].map(flt => (
+                <MenuItem key={flt} value={flt}>
+                  {flt}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {/* Rating */}
+            <TextField
+              select
+              label="Rating"
+              size="small"
+              value={filters.rating}
+              onChange={e => setFilters(f => ({ ...f, rating: e.target.value }))}
+              sx={{ minWidth: 200 }}
+              SelectProps={{
+                displayEmpty: true,
+                renderValue: sel => (sel ? sel.toUpperCase() : ""),
+              }}
+              InputProps={{
+                endAdornment: filters.rating && (
+                  <InputAdornment position="start">
+                    <IconButton size="small" onClick={() => setFilters(f => ({ ...f, rating: "" }))}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            >
+              {["g", "pg", "pg13", "r17"].map(r => (
+                <MenuItem key={r} value={r}>
+                  {r.toUpperCase()}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {/* SFW */}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={filters.sfw}
+                  onChange={e => setFilters(f => ({ ...f, sfw: e.target.checked }))}
+                />
+              }
+              label="SFW Only"
+            />
+          </Box>
+
+          {/* Search */}
+          <Box sx={{ flexBasis: { xs: "100%", sm: "auto" }, minWidth: 250 }}>
+            <TextField
+              label="Search Anime"
+              variant="outlined"
+              fullWidth
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              sx={{ bgcolor: "black" }}
+            />
+          </Box>
+        </Box>
 
         {/* Top Banner Carousel */}
         {topBanners.length > 0 && (
-          <Box
-            sx={{
-              position: "relative",
-              overflow: "hidden",
-              height: 250,
-              mb: 4,
-              borderRadius: 2,
-            }}
-          >
+          <Box sx={{ position: "relative", overflow: "hidden", height: 250, mb: 4, borderRadius: 2 }}>
             <Box
               sx={{
                 display: "flex",
@@ -113,16 +253,16 @@ export default function SearchPage() {
                 width: `${topBanners.length * 10}%`,
               }}
             >
-              {topBanners.map((rec, index) => {
-                const anime = rec.entry[0]; // Get the first recommended anime
+              {topBanners.map((rec, i) => {
+                const anime = rec.entry[0];
                 return (
                   <Box
-                    key={anime.mal_id}
+                    key={`${anime.mal_id}-${i}`}
                     sx={{
                       flex: "0 0 100%",
                       height: 250,
                       display: "flex",
-                      bgcolor: "#000000",
+                      bgcolor: "#000",
                       alignItems: "center",
                       justifyContent: "space-between",
                       px: 4,
@@ -130,22 +270,16 @@ export default function SearchPage() {
                     }}
                     onClick={() => handleCardClick(anime.mal_id)}
                   >
-                    {/* Left content */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography
-                        variant="h5"
-                        sx={{ fontWeight: "bold", mb: 1 }}
-                      >
+                      <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1, color: "white" }}>
                         {anime.title}
                       </Typography>
                       <Typography variant="body2" sx={{ color: "white" }}>
                         {rec.content?.length > 100
-                          ? rec.content.slice(0, 100) + "..."
+                          ? rec.content.slice(0, 100) + "…"
                           : rec.content || "No description available."}
                       </Typography>
                     </Box>
-
-                    {/* Right image */}
                     <Box
                       component="img"
                       src={anime.images.jpg.large_image_url}
@@ -157,7 +291,6 @@ export default function SearchPage() {
                         border: "1px solid #333",
                         borderRadius: 1,
                         ml: 3,
-                        flexShrink: 0,
                       }}
                     />
                   </Box>
@@ -178,24 +311,21 @@ export default function SearchPage() {
               </Grid>
             ))}
           </Grid>
-        ) : results.length === 0 ? (
+        ) : !results.length ? (
           <Box mt={4} textAlign="center">
             No results found.
           </Box>
         ) : (
           <Grid container spacing={4} justifyContent="center">
-            {results.map((anime) => (
-              <Grid item xs={12} sm={6} md={3} key={anime.mal_id}>
+            {results.map((anime, i) => (
+              <Grid item xs={12} sm={6} md={3} key={`${anime.mal_id}-${i}`}>
                 <Card
                   sx={{
                     width: 225,
                     height: 500,
                     backgroundColor: "background.paper",
                     transition: "transform 0.3s ease",
-                    "&:hover": {
-                      transform: "scale(1.05)",
-                      cursor: "pointer",
-                    },
+                    "&:hover": { transform: "scale(1.05)", cursor: "pointer" },
                   }}
                 >
                   <CardActionArea onClick={() => handleCardClick(anime.mal_id)}>
@@ -214,30 +344,15 @@ export default function SearchPage() {
                         component="img"
                         image={anime.images.jpg.image_url}
                         alt={anime.title}
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
+                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                       />
                     </Box>
                     <CardContent>
-                      <Box
-                        sx={{
-                          fontSize: "1.1rem",
-                          fontWeight: "bold",
-                          mb: 1,
-                          color: "white",
-                        }}
-                      >
+                      <Typography sx={{ fontSize: "1.1rem", fontWeight: "bold", mb: 1, color: "white" }}>
                         {anime.title}
-                      </Box>
-                      <Box sx={{ fontSize: "0.9rem" }}>
-                        Episodes: {anime.episodes ?? "N/A"}
-                      </Box>
-                      <Box sx={{ fontSize: "0.9rem" }}>
-                        Status: {anime.status}
-                      </Box>
+                      </Typography>
+                      <Typography sx={{ fontSize: "0.9rem" }}>Episodes: {anime.episodes ?? "N/A"}</Typography>
+                      <Typography sx={{ fontSize: "0.9rem" }}>Status: {anime.status}</Typography>
                     </CardContent>
                   </CardActionArea>
                 </Card>
@@ -246,13 +361,9 @@ export default function SearchPage() {
           </Grid>
         )}
 
+        {/* Pagination */}
         <Box mt={4} display="flex" justifyContent="center">
-          <Pagination
-            count={pageCount}
-            page={page}
-            onChange={(_, value) => setPage(value)}
-            color="primary"
-          />
+          <Pagination count={pageCount} page={page} onChange={(_, v) => setPage(v)} color="primary" />
         </Box>
       </Box>
     </Box>
