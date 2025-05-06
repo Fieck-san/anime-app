@@ -52,7 +52,7 @@ export default function SearchPage() {
       })
       .then((data) => {
         const list = Array.isArray(data.data) ? data.data : [];
-        setResults(list.slice(0, 21));
+        setResults(list.slice(0, 24));
         setPageCount(data.pagination?.last_visible_page || 1);
       })
       .catch((err) => {
