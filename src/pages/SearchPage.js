@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import debounce from 'lodash.debounce';
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import debounce from "lodash.debounce";
 import {
   Box,
   TextField,
@@ -12,10 +12,10 @@ import {
   CardContent,
   CardMedia,
   Skeleton,
-} from '@mui/material';
+} from "@mui/material";
 
 export default function SearchPage() {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -58,19 +58,19 @@ export default function SearchPage() {
   }, [results]);
 
   const handleCardClick = (id) => navigate(`/anime/${id}`);
-  const topBanners = results.slice(0, 5);
+  const topBanners = results.slice(0, 10);
 
   return (
     <Box
       sx={{
-        width: '100vw',
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-        color: 'text.primary',
+        width: "100vw",
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        color: "text.primary",
         p: 4,
       }}
     >
-      <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+      <Box sx={{ maxWidth: "1200px", mx: "auto" }}>
         <TextField
           label="Search Anime"
           variant="outlined"
@@ -80,74 +80,76 @@ export default function SearchPage() {
         />
 
         {/* Top Banner Carousel */}
-        {/* {topBanners.length > 0 && (
-          <Box sx={{ position: 'relative', overflow: 'hidden', height: 250, mb: 4, borderRadius: 2 }}>
+        {topBanners.length > 0 && (
+          <Box
+            sx={{
+              position: "relative",
+              overflow: "hidden",
+              height: 250,
+              mb: 4,
+              borderRadius: 2,
+            }}
+          >
             <Box
               sx={{
-                display: 'flex',
-                transition: 'transform 0.6s ease-in-out',
+                display: "flex",
+                transition: "transform 0.6s ease-in-out",
                 transform: `translateX(-${currentBanner * 100}%)`,
-                width: `${topBanners.length * 100}%`,
+                width: `${topBanners.length * 10}%`,
               }}
             >
               {topBanners.map((anime) => (
                 <Box
                   key={anime.mal_id}
                   sx={{
-                    flex: '0 0 100%',
+                    flex: "0 0 100%",
                     height: 250,
-                    backgroundImage: `url(${anime.images.jpg.large_image_url})`,
-                    backgroundSize: 'auto',
-                    // backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                    cursor: 'pointer',
+                    display: "flex",
+                    bgcolor: "#000000",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    px: 4,
+                    cursor: "pointer",
                   }}
                   onClick={() => handleCardClick(anime.mal_id)}
                 >
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      width: '100%',
-                      bgcolor: 'rgba(0,0,0,0.6)',
-                      p: 2,
-                    }}
-                  >
-                    <Typography variant="h6" color="white">
+                  {/* Left content */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
                       {anime.title}
                     </Typography>
+                    <Typography variant="body2" sx={{ color: "white" }}>
+                      {anime.synopsis?.length > 100
+                        ? anime.synopsis.slice(0, 100) + "..."
+                        : anime.synopsis || "No description available."}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Genres:{" "}
+                      {(anime.genres || []).map((g) => g.name).join(", ") ||
+                        "N/A"}
+                    </Typography>
                   </Box>
+
+                  {/* Right image */}
+                  <Box
+                    component="img"
+                    src={anime.images.jpg.large_image_url}
+                    alt={anime.title}
+                    sx={{
+                      width: 120,
+                      height: 180,
+                      objectFit: "cover",
+                      border: "1px solid #333",
+                      borderRadius: 1,
+                      ml: 3,
+                      flexShrink: 0,
+                    }}
+                  />
                 </Box>
               ))}
             </Box>
-
-            {/* Dot Indicators */}
-            {/* <Box
-              sx={{
-                position: 'absolute',
-                bottom: 8,
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 1,
-              }}
-            >
-              {topBanners.map((_, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    bgcolor: currentBanner === idx ? 'primary.main' : 'grey.500',
-                    transition: 'background-color 0.3s',
-                  }}
-                />
-              ))}
-            </Box>
           </Box>
-        )} } */}
+        )}
 
         {/* Anime Grid */}
         {loading ? (
@@ -172,11 +174,11 @@ export default function SearchPage() {
                   sx={{
                     width: 225,
                     height: 500,
-                    backgroundColor: 'background.paper',
-                    transition: 'transform 0.3s ease',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                      cursor: 'pointer',
+                    backgroundColor: "background.paper",
+                    transition: "transform 0.3s ease",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                      cursor: "pointer",
                     },
                   }}
                 >
@@ -185,11 +187,11 @@ export default function SearchPage() {
                       sx={{
                         width: 225,
                         height: 355,
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#222',
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#222",
                       }}
                     >
                       <CardMedia
@@ -197,27 +199,27 @@ export default function SearchPage() {
                         image={anime.images.jpg.image_url}
                         alt={anime.title}
                         sx={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
                         }}
                       />
                     </Box>
                     <CardContent>
                       <Box
                         sx={{
-                          fontSize: '1.1rem',
-                          fontWeight: 'bold',
+                          fontSize: "1.1rem",
+                          fontWeight: "bold",
                           mb: 1,
-                          color: 'white',
+                          color: "white",
                         }}
                       >
                         {anime.title}
                       </Box>
-                      <Box sx={{ fontSize: '0.9rem' }}>
-                        Episodes: {anime.episodes ?? 'N/A'}
+                      <Box sx={{ fontSize: "0.9rem" }}>
+                        Episodes: {anime.episodes ?? "N/A"}
                       </Box>
-                      <Box sx={{ fontSize: '0.9rem' }}>
+                      <Box sx={{ fontSize: "0.9rem" }}>
                         Status: {anime.status}
                       </Box>
                     </CardContent>
