@@ -29,7 +29,7 @@ export default function SearchPage() {
   const navigate = useNavigate();
   const bannerInterval = useRef(null);
 
-  // --- core fetch with 429-guard ---
+  // core fetch with 429-guard 
   const fetchAnime = (q, p, f) => {
     setLoading(true);
     const basePath = q ? "/anime" : "/top/anime";
@@ -66,22 +66,18 @@ export default function SearchPage() {
       .finally(() => setLoading(false));
   };
 
-  // --- debounce all inputs together ---
   const debouncedFetch = useRef(
     debounce((q, p, f) => {
       fetchAnime(q, p, f);
     }, 500)
   ).current;
 
-  // cancel debounce on unmount
   useEffect(() => () => debouncedFetch.cancel(), [debouncedFetch]);
 
-  // whenever search, page, or filters change, wait 500ms then fetch
   useEffect(() => {
     debouncedFetch(search, page, filters);
   }, [search, page, filters, debouncedFetch]);
 
-  // --- banner carousel ---
   useEffect(() => {
     if (results.length > 0) {
       bannerInterval.current = setInterval(() => {
@@ -91,7 +87,6 @@ export default function SearchPage() {
     }
   }, [results]);
 
-  // --- recommendations (once) ---
   useEffect(() => {
     fetch("https://api.jikan.moe/v4/recommendations/anime")
       .then((res) => res.json())
@@ -153,7 +148,7 @@ export default function SearchPage() {
           </Box>
         </Box>
 
-        {/* Top Banner Carousel */}
+        {/* Top Banner  */}
         {topBanners.length > 0 && (
           <BannerCarousel
             banners={recommended}

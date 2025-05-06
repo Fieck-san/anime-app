@@ -1,4 +1,3 @@
-// src/components/FilterBar.jsx
 import React from "react";
 import {
   Box,
